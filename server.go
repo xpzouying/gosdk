@@ -1,6 +1,10 @@
 package gosdk
 
-import "context"
+import (
+	"context"
+
+	"golang.org/x/sync/errgroup"
+)
 
 type Server struct {
 	apps []App
@@ -25,9 +29,16 @@ func (s *Server) Serve() error {
 }
 
 func (s *Server) Shutdown() {
-	ctx := context.Background()
+	parent := context.Background()
 
+	g, ctx := errgroup.WithContext(parent)
 	for _, app := range s.apps {
-		app.Stop(ctx)
+		app := app
+
+		g.Go(func() error {
+			return app.Stop(ctx)
+		})
 	}
+
+	_ = g.Wait()
 }
